@@ -3,7 +3,6 @@
 #  Q2 Macro Installer  -  Box / Printer versions + bloat removal
 #  For a Qidi Q2 on stock Klipper firmware. Run over SSH as the mks user:
 #      bash <(curl -fsSL https://raw.githubusercontent.com/ckflyer/ckflyer-s-macros-and-fixes/main/install.sh)
-#  Based on Camden-Winder/Qidi-Q2-superuser (GPL-3.0). Same licence.
 # =====================================================================
 set -o pipefail
 
