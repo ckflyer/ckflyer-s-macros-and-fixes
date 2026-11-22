@@ -18,10 +18,12 @@ The menu:
 | --- | --- |
 | 1) Install Box version | Your Q2 has a Qidi Box connected |
 | 2) Install Printer version | No Box |
-| 3) Update macros | Re-downloads the macros, `My_Configs.cfg` and KAMP files for the version you installed. Leaves `printer.cfg` alone |
+| 3) Update macros | Re-downloads the macros and KAMP files for the version you installed. Leaves `printer.cfg` alone |
 | 4) Remove bloat | Turns off unneeded services (list below) |
 | 5) Undo bloat removal | Turns them back on |
 | 6) Restore a backup | Puts back a saved copy of your whole config folder |
+
+Any other config files you have, such as your own macro files and their `[include]` lines, are left in place.
 
 Every install and update first saves your whole config folder to `~/q2_macro_backups/`. The first backup is marked as "before first install" in the restore menu. The installer won't run during a print, downloads everything before changing anything, and restarts Klipper at the end.
 
@@ -86,16 +88,13 @@ The purge line runs inside `PRINT_START`, so the start G-code has no purge. `PRI
 
 ## What's included
 
-- `Q2/macros/gcode_macro-Box.cfg`, `gcode_macro-Printer.cfg`: the main macros (installed as `gcode_macro.cfg`)
-- `Q2/macros/My_Configs.cfg`: `SPEED_TEST`, `LUBE_IT`, `ORCA_QIDI_BOX`, host CPU and toolhead temperature sensors
+- `Q2/macros/gcode_macro-Box.cfg`, `gcode_macro-Printer.cfg`: the main macros (installed as `gcode_macro.cfg`). The Box file also has `ORCA_QIDI_BOX`, which the Box start G-code calls to map tools to Box slots.
 - `Q2/macros/printer.cfg`: template used on the legacy layout (your calibration is carried over)
-- `Q2/KAMP/`: KAMP adaptive meshing and the purge line
+- `Q2/KAMP/`: KAMP adaptive meshing, plus the superuser `LINE_PURGE` (a fixed 55 mm line at the front of the bed, with a retract and a quick move to snap the string)
 
 ### Useful macros
 
 - `G32` before a print: skip the adaptive mesh for that one print. `PRINT_END` turns adaptive meshing back on.
-- `LUBE_IT`: runs every axis through its full travel to spread fresh lube.
-- `SPEED_TEST SPEED=300 ACCEL=5000`: checks for skipped steps at a given speed.
 - Box heater stays on after prints. To turn it off at the end of each print, remove the `#` in front of `DISABLE_BOX_HEATER` in `PRINT_END`.
 
 ## Bloat removal

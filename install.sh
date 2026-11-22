@@ -68,7 +68,7 @@ download_files() {
     DL_DIR=$(mktemp -d)
     mkdir -p "${DL_DIR}/KAMP"
     info "Downloading files from GitHub..."
-    for f in "macros/gcode_macro-${version}.cfg" macros/My_Configs.cfg macros/printer.cfg \
+    for f in "macros/gcode_macro-${version}.cfg" macros/printer.cfg \
              KAMP/KAMP_settings.cfg KAMP/Adaptive_Meshing.cfg KAMP/Line_Purge.cfg KAMP/Smart_Park.cfg; do
         if ! curl -fsSL --max-time 30 "${REPO_RAW}/Q2/${f}" -o "${DL_DIR}/$(basename "$f")" \
            || [ ! -s "${DL_DIR}/$(basename "$f")" ]; then
@@ -239,11 +239,8 @@ write_files() {
     local version="$1" mode="$2"
     cp "${DL_DIR}/gcode_macro-${version}.cfg" "$MACRO_DEST"
     ok "Macros written to ${MACRO_DEST#"${CONFIG_DIR}"/}"
-    cp "${DL_DIR}/My_Configs.cfg" "${CONFIG_DIR}/My_Configs.cfg"
-    ok "My_Configs.cfg written (SPEED_TEST, LUBE_IT, ORCA_QIDI_BOX, host/toolhead temps)"
     if [ "$mode" = "full" ] && [ "$LAYOUT" = "legacy" ]; then install_printer_cfg; fi
     install_kamp
-    ensure_include "My_Configs.cfg"
     mkdir -p "$BACKUP_DIR"; echo "$version" > "$INSTALLED_FILE"
 }
 
@@ -255,7 +252,7 @@ update_macros() {
         warn "No install recorded on this printer. Use option 1 or 2 first."; return 0
     fi
     if printer_busy; then err "A print is running or paused. Try again when it's finished."; return 1; fi
-    info "Installed version: ${version}. This re-downloads the macros, My_Configs.cfg and KAMP files."
+    info "Installed version: ${version}. This re-downloads the macros and KAMP files."
     info "printer.cfg is left alone."
     confirm "Update now?" || return 0
     download_files "$version" || return 1
