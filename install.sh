@@ -117,7 +117,7 @@ ensure_include() {
 }
 
 # Comments out every line of any PRINT_START / PRINT_END / ORCA_QIDI_BOX
-# section in a config file, so the ones in print_macros.cfg are the only ones.
+# section in a config file, so the ones in gcode_macro.cfg and extras.cfg are the only ones.
 comment_out_old_macros() {
     local f="$1" tmp found
     found=$(grep -cE "^\[gcode_macro (${OUR_MACROS})\][[:space:]]*(#.*)?$" "$f" 2>/dev/null)
