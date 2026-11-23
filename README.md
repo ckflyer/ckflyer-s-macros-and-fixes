@@ -20,7 +20,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ckflyer/ckflyer-s-macros-and
 What option 1 changes:
 
 - Adds `print_macros.cfg` (`PRINT_START`, `PRINT_END`, `ORCA_QIDI_BOX`) and the four `KAMP` files, and their `[include]` lines in `printer.cfg`.
-- Comments out any older `PRINT_START`, `PRINT_END` or `ORCA_QIDI_BOX` in your other config files, so there's only one of each. Nothing else is touched.
+- Comments out any older `PRINT_START`, `PRINT_END` or `ORCA_QIDI_BOX` in your other config files, so there's only one of each.
+- Comments out any other KAMP include in `printer.cfg` (such as Qidi's `[include ./KAMP/KAMP_Settings.cfg]`), so only one copy of KAMP loads. Nothing else is touched.
 
 Before changing anything it saves your whole config folder to `~/q2_macro_backups/`; the first backup is marked "before first install" in the restore menu. It won't run during a print, downloads everything before changing anything, and restarts Klipper at the end. It works on both firmware layouts (legacy and 01.01.02+).
 

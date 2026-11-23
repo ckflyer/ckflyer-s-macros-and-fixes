@@ -112,7 +112,7 @@ download_files() {
 # Adds "[include X]" at the top of printer.cfg if it isn't there yet.
 ensure_include() {
     local inc="[include $1]" pcfg="${CONFIG_DIR}/printer.cfg"
-    if grep -qF "$inc" "$pcfg"; then return 0; fi
+    if grep -qxF "$inc" <(tr -d '\r' < "$pcfg"); then return 0; fi
     sed -i "1i ${inc}" "$pcfg" && ok "Added ${inc} to printer.cfg"
 }
 
@@ -141,8 +141,14 @@ install_kamp() {
         mv "${CONFIG_DIR}/klipper-macros-qd/KAMP_Settings.cfg" "${CONFIG_DIR}/klipper-macros-qd/KAMP_Settings.cfg.disabled" \
             && info "Renamed klipper-macros-qd/KAMP_Settings.cfg to .disabled (it clashes with KAMP/)"
     fi
-    # A stock printer.cfg may include a KAMP_Settings.cfg in the main folder: point it at KAMP/ instead
-    sed -i -E 's/^\[include +KAMP_Settings\.cfg\]/# &  (replaced by KAMP\/KAMP_settings.cfg)/I' "${CONFIG_DIR}/printer.cfg"
+    # Turn off any other KAMP include (e.g. Qidi's [include ./KAMP/KAMP_Settings.cfg]),
+    # otherwise two copies of KAMP load and Klipper refuses to start.
+    local pcfg="${CONFIG_DIR}/printer.cfg" line
+    while IFS= read -r line; do
+        [ "$line" = "[include KAMP/KAMP_settings.cfg]" ] && continue
+        sed -i "s|^$(printf '%s' "$line" | sed 's/[][\\.*^$|]/\\&/g')\$|# & (replaced by the KAMP folder include)|" "$pcfg"
+        info "Commented out ${line} in printer.cfg"
+    done < <(grep -iE '^\[include [^]]*kamp[^]]*\]' "$pcfg" | tr -d '\r')
     mkdir -p "${CONFIG_DIR}/KAMP"
     local k
     for k in $KAMP_FILES; do cp "${DL_DIR}/${k}" "${CONFIG_DIR}/KAMP/${k}"; done
