@@ -6,12 +6,12 @@
 # =====================================================================
 set -o pipefail
 
-VERSION="2.0"
+VERSION="3.0"
 REPO_RAW="${Q2_REPO_RAW:-https://raw.githubusercontent.com/ckflyer/ckflyer-s-macros-and-fixes/main}"
 MOONRAKER="${Q2_MOONRAKER:-http://127.0.0.1:7125}"
 BACKUP_DIR="${HOME}/q2_macro_backups"
 STATE_FILE="${BACKUP_DIR}/disabled_services.txt"
-MACRO_FILE="print_macros.cfg"
+MACRO_FILES="gcode_macro.cfg extras.cfg"
 OUR_MACROS="PRINT_START|PRINT_END|ORCA_QIDI_BOX"
 KAMP_FILES="KAMP_settings.cfg Adaptive_Meshing.cfg Line_Purge.cfg Smart_Park.cfg"
 BLOAT_UNITS="algo_app QIDILink-client strongswan-starter openvpn triggerhappy bluetooth packagekit xl2tpd"
@@ -98,7 +98,7 @@ download_files() {
     local f
     DL_DIR=$(mktemp -d)
     info "Downloading files from GitHub..."
-    for f in "$MACRO_FILE" $(for k in $KAMP_FILES; do echo "KAMP/$k"; done); do
+    for f in $MACRO_FILES $(for k in $KAMP_FILES; do echo "KAMP/$k"; done); do
         if ! curl -fsSL --max-time 30 "${REPO_RAW}/Q2/${f}" -o "${DL_DIR}/$(basename "$f")" \
            || [ ! -s "${DL_DIR}/$(basename "$f")" ]; then
             err "Couldn't download ${f}. Check the printer's internet connection. Nothing was changed."
@@ -157,31 +157,45 @@ install_kamp() {
 }
 
 install_macros() {
-    printf '\n%s== Install / update print macros ==%s\n' "$C_B" "$C_0"
-    info "Firmware layout: ${LAYOUT}   Config: ${CONFIG_DIR}"
+    printf '\n%s== Install / update macros ==%s\n' "$C_B" "$C_0"
+    info "Config: ${CONFIG_DIR}"
+    if [ "$LAYOUT" != "legacy" ]; then
+        err "This firmware keeps its macros in klipper-macros-qd/. These macro files are made for"
+        err "the older (legacy) layout, so nothing was installed."
+        return 1
+    fi
     if printer_busy; then err "A print is running or paused. Try again when it's finished."; return 1; fi
     if [ -d "${CONFIG_DIR}/mmu" ] || [ -f "${CONFIG_DIR}/bunnybox_macros.cfg" ]; then
         warn "BunnyBox / Happy Hare files found. These macros may conflict with it."
         confirm "Continue anyway?" || return 0
     fi
-    info "This installs PRINT_START, PRINT_END and ORCA_QIDI_BOX (print_macros.cfg) and the KAMP files."
-    info "Any older copies of those three macros in your other config files get commented out."
-    info "Nothing else in your config is changed."
+    info "This replaces gcode_macro.cfg, installs extras.cfg (replacing My_Configs.cfg) and the KAMP files."
+    info "printer.cfg only gets its include lines updated."
     confirm "Go ahead?" || return 0
 
     download_files || return 1
     make_backup || { rm -rf "$DL_DIR"; return 1; }
+    local pcfg="${CONFIG_DIR}/printer.cfg" f
 
-    local f
-    for f in "${CONFIG_DIR}"/*.cfg "${CONFIG_DIR}"/klipper-macros-qd/*.cfg; do
-        [ -f "$f" ] || continue
-        [ "$(basename "$f")" = "$MACRO_FILE" ] && continue
+    cp "${DL_DIR}/gcode_macro.cfg" "${CONFIG_DIR}/gcode_macro.cfg" && ok "gcode_macro.cfg installed (with PRINT_START and PRINT_END)"
+    cp "${DL_DIR}/extras.cfg" "${CONFIG_DIR}/extras.cfg" && ok "extras.cfg installed"
+    if [ -f "${CONFIG_DIR}/My_Configs.cfg" ]; then
+        rm -f "${CONFIG_DIR}/My_Configs.cfg" && ok "Removed My_Configs.cfg (now extras.cfg; the old one is in the backup)"
+    fi
+    sed -i -E 's/^\[include +My_Configs\.cfg\]/[include extras.cfg]/' "$pcfg"
+    # leftover from an earlier version of this installer
+    if grep -qx '\[include print_macros.cfg\]' <(tr -d '\r' < "$pcfg"); then
+        sed -i '/^\[include print_macros\.cfg\]/d' "$pcfg"; rm -f "${CONFIG_DIR}/print_macros.cfg"
+        info "Removed print_macros.cfg from an earlier install"
+    fi
+    ensure_include "extras.cfg"
+
+    # Any other copy of these macros elsewhere would clash: comment it out
+    for f in "${CONFIG_DIR}"/*.cfg; do
+        case "$(basename "$f")" in gcode_macro.cfg|extras.cfg|printer.cfg) continue ;; esac
         comment_out_old_macros "$f"
     done
-    cp "${DL_DIR}/${MACRO_FILE}" "${CONFIG_DIR}/${MACRO_FILE}"
-    ok "${MACRO_FILE} installed"
     install_kamp
-    ensure_include "$MACRO_FILE"
     rm -rf "$DL_DIR"
 
     firmware_restart
@@ -287,7 +301,7 @@ restore_backup() {
 menu() {
     while true; do
         printf '\n%s ckflyer Q2 installer v%s %s   layout: %s\n' "$C_B" "$VERSION" "$C_0" "$LAYOUT"
-        echo "  1) Install / update print macros + KAMP"
+        echo "  1) Install / update macros + KAMP"
         echo "  2) Remove bloat"
         echo "  3) Undo bloat removal"
         echo "  4) Restore a backup"
